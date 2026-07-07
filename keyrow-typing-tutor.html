@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>keyrow — learn to type without looking down</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#161d27;
+    --panel:#212a37;
+    --panel-raised:#283242;
+    --keyface:#e9ebef;
+    --text:#eef0f3;
+    --muted:#8493a6;
+    --line:#374050;
+
+    --pinky:#e4572e;
+    --ring:#f2c14e;
+    --middle:#4ecdc4;
+    --index:#9b7ede;
+
+    --good:#4ecdc4;
+    --bad:#e4572e;
+
+    --display: 'Space Mono', monospace;
+    --body: 'Inter', sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--text);
+    font-family:var(--body);
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+  }
+
+  a{ color:inherit; }
+
+  .page{ max-width:1080px; margin:0 auto; padding:0 24px 80px; }
+
+  /* ---------- topbar ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:28px 0 20px;
+  }
+  .wordmark{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:20px;
+    letter-spacing:0.5px;
+  }
+  .wordmark .dot{ color:var(--ring); }
+  .topbar nav{ display:flex; gap:28px; font-size:14px; color:var(--muted); }
+  .topbar nav a{ text-decoration:none; }
+  .topbar nav a:hover{ color:var(--text); }
+
+  /* ---------- hero ---------- */
+  .hero-intro{ padding:36px 0 28px; max-width:640px; }
+  .eyebrow{
+    font-family:var(--display);
+    font-size:12px;
+    letter-spacing:2.5px;
+    text-transform:uppercase;
+    color:var(--ring);
+    margin:0 0 14px;
+  }
+  h1{
+    font-size:clamp(34px, 5vw, 52px);
+    line-height:1.05;
+    margin:0 0 16px;
+    font-weight:700;
+    letter-spacing:-0.5px;
+  }
+  .hero-intro p.sub{
+    color:var(--muted);
+    font-size:16px;
+    line-height:1.6;
+    margin:0;
+  }
+
+  /* ---------- practice card ---------- */
+  .practice-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:28px;
+    margin-top:8px;
+  }
+
+  .stats-row{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+    margin-bottom:22px;
+  }
+  .stat{
+    background:var(--panel-raised);
+    border-radius:10px;
+    padding:12px 14px;
+    text-align:left;
+  }
+  .stat .num{
+    font-family:var(--display);
+    font-size:24px;
+    font-weight:700;
+    display:block;
+  }
+  .stat .label{
+    font-size:11px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:1px;
+  }
+  .stat.wpm .num{ color:var(--ring); }
+  .stat.acc .num{ color:var(--middle); }
+  .stat.err .num{ color:var(--pinky); }
+
+  .target-text{
+    font-family:var(--display);
+    font-size:clamp(16px, 2.2vw, 22px);
+    line-height:1.9;
+    letter-spacing:0.5px;
+    background:var(--panel-raised);
+    border-radius:12px;
+    padding:22px 24px;
+    margin-bottom:18px;
+    word-spacing:2px;
+    user-select:none;
+    min-height:104px;
+    white-space:normal;
+    overflow-wrap:break-word;
+    word-break:break-word;
+  }
+  .target-text .char{ position:relative; }
+  .target-text .char.pending{ color:var(--muted); }
+  .target-text .char.correct{ color:var(--good); }
+  .target-text .char.incorrect{ color:var(--bad); background:rgba(228,87,46,0.18); border-radius:3px; }
+  .target-text .char.current::before{
+    content:'';
+    position:absolute;
+    left:0; top:-2px; bottom:-2px;
+    width:2px;
+    background:var(--ring);
+    animation:blink 1s step-end infinite;
+  }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .sr-input{
+    position:absolute;
+    opacity:0;
+    pointer-events:none;
+    height:0; width:0;
+  }
+
+  .practice-hint{
+    font-size:13px; color:var(--muted); margin:0 0 20px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .practice-hint button{
+    font-family:var(--body);
+    font-size:12.5px;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--text);
+    padding:6px 12px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .practice-hint button:hover{ border-color:var(--ring); color:var(--ring); }
+
+  /* ---------- keyboard ---------- */
+  .keyboard{
+    display:flex; flex-direction:column; gap:6px;
+    margin-bottom:20px;
+  }
+  .kb-row{ display:flex; gap:6px; justify-content:center; }
+  .key{
+    position:relative;
+    font-family:var(--display);
+    font-size:12px;
+    color:#1c232f;
+    background:var(--keyface);
+    border-radius:6px;
+    height:38px;
+    min-width:34px;
+    display:flex; align-items:center; justify-content:center;
+    flex:1;
+    transition:transform 0.06s ease, box-shadow 0.15s ease, background 0.15s ease;
+    box-shadow:0 2px 0 rgba(0,0,0,0.35);
+  }
+  .key.utility{ background:#3a4353; color:var(--muted); flex:1.6; font-size:10.5px; }
+  .key.space{ flex:8; }
+  .key.f-pinky{ box-shadow:0 2px 0 rgba(0,0,0,0.35), inset 0 0 0 2px var(--pinky); }
+  .key.f-ring{ box-shadow:0 2px 0 rgba(0,0,0,0.35), inset 0 0 0 2px var(--ring); }
+  .key.f-middle{ box-shadow:0 2px 0 rgba(0,0,0,0.35), inset 0 0 0 2px var(--middle); }
+  .key.f-index{ box-shadow:0 2px 0 rgba(0,0,0,0.35), inset 0 0 0 2px var(--index); }
+  .key.home-bump::after{
+    content:'';
+    position:absolute; bottom:5px; left:50%; transform:translateX(-50%);
+    width:10px; height:2.5px; border-radius:2px; background:#1c232f; opacity:0.35;
+  }
+  .key.next{
+    transform:translateY(2px);
+    box-shadow:0 0 0 3px rgba(255,255,255,0.85), 0 0 18px 2px currentColor;
+  }
+  .key.next.f-pinky{ background:var(--pinky); color:#2a0d02; }
+  .key.next.f-ring{ background:var(--ring); color:#2a1d02; }
+  .key.next.f-middle{ background:var(--middle); color:#032a27; }
+  .key.next.f-index{ background:var(--index); color:#1c0f33; }
+  .key.pressed{ transform:translateY(3px) scale(0.94); }
+
+  .legend{
+    display:flex; flex-wrap:wrap; gap:18px;
+    padding-top:16px; border-top:1px solid var(--line);
+    font-size:12.5px; color:var(--muted);
+  }
+  .legend-item{ display:flex; align-items:center; gap:8px; }
+  .swatch{ width:12px; height:12px; border-radius:3px; }
+  .swatch.pinky{ background:var(--pinky); }
+  .swatch.ring{ background:var(--ring); }
+  .swatch.middle{ background:var(--middle); }
+  .swatch.index{ background:var(--index); }
+
+  /* ---------- home grid ---------- */
+  .home-section{ margin-top:8px; }
+  .home-section h2{ font-size:22px; margin:0 0 22px; }
+
+  .home-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(230px, 1fr));
+    gap:14px;
+  }
+  .home-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:22px;
+    text-align:left;
+    cursor:pointer;
+    transition:border-color 0.15s ease, transform 0.15s ease;
+  }
+  .home-card:hover{ border-color:var(--ring); transform:translateY(-2px); }
+  .home-card .n{
+    font-family:var(--display);
+    color:var(--ring);
+    font-size:13px;
+    margin-bottom:14px;
+    display:block;
+  }
+  .home-card h3{ margin:0 0 8px; font-size:17px; }
+  .home-card p{ margin:0 0 18px; color:var(--muted); font-size:13.5px; line-height:1.5; }
+  .home-card .start{
+    font-family:var(--display);
+    font-size:12.5px;
+    color:var(--text);
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .home-card:hover .start{ color:var(--ring); }
+
+  /* ---------- practice header ---------- */
+  .practice-header{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:22px; gap:12px; flex-wrap:wrap;
+  }
+  .practice-header h2{ margin:0; font-size:19px; }
+  .practice-header .sub{ color:var(--muted); font-size:13px; margin:4px 0 0; }
+  .back-link{
+    font-family:var(--body);
+    font-size:13px;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--muted);
+    padding:7px 14px;
+    border-radius:999px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .back-link:hover{ color:var(--text); border-color:#4a5568; }
+
+  /* ---------- completion panel ---------- */
+  .completion-panel{
+    display:none;
+    background:var(--panel-raised);
+    border:1px solid var(--ring);
+    border-radius:12px;
+    padding:26px 24px;
+    margin-bottom:18px;
+    text-align:center;
+  }
+  .completion-panel.show{ display:block; }
+  .completion-panel .headline{
+    font-family:var(--display);
+    font-size:18px;
+    color:var(--ring);
+    margin:0 0 6px;
+  }
+  .completion-panel .recap{
+    color:var(--muted);
+    font-size:13.5px;
+    margin:0 0 20px;
+  }
+  .completion-panel .recap strong{ color:var(--text); }
+  .completion-actions{
+    display:flex; justify-content:center; gap:10px; flex-wrap:wrap;
+  }
+  .btn{
+    font-family:var(--body);
+    font-size:13.5px;
+    font-weight:600;
+    padding:10px 18px;
+    border-radius:8px;
+    cursor:pointer;
+    border:1px solid transparent;
+  }
+  .btn-primary{ background:var(--ring); color:#1b1305; }
+  .btn-primary:hover{ filter:brightness(1.05); }
+  .btn-secondary{ background:transparent; border-color:var(--line); color:var(--text); }
+  .btn-secondary:hover{ border-color:#4a5568; }
+
+  .practice-view.done .target-text,
+  .practice-view.done .keyboard,
+  .practice-view.done .legend,
+  .practice-view.done .practice-hint{ opacity:0.45; }
+
+  footer{
+    margin-top:64px;
+    padding-top:24px;
+    border-top:1px solid var(--line);
+    color:var(--muted);
+    font-size:13px;
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;
+  }
+
+  @media (max-width:640px){
+    .stats-row{ grid-template-columns:repeat(2,1fr); }
+    .key{ font-size:10px; height:32px; min-width:20px; }
+    .home-grid{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="topbar">
+    <div class="wordmark">keyrow<span class="dot">.</span></div>
+    <nav>
+      <a href="#" id="navHome">All practices</a>
+    </nav>
+  </header>
+
+  <section class="hero-intro">
+    <p class="eyebrow">Touch-typing, one row at a time</p>
+    <h1>Type without looking down.</h1>
+    <p class="sub">Pick a practice below. Each one is colored by the finger that should press it on the board — glance once, and your hands will start finding the pattern on their own.</p>
+  </section>
+
+  <section class="home-section" id="homeView">
+    <h2>Choose a practice</h2>
+    <div class="home-grid" id="homeGrid"></div>
+  </section>
+
+  <section class="practice-card practice-view" id="practiceView" style="display:none;">
+    <div class="practice-header">
+      <div>
+        <h2 id="practiceTitle">Home row</h2>
+        <p class="sub" id="practiceDesc"></p>
+      </div>
+      <button class="back-link" id="backLink">← All practices</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat wpm"><span class="num" id="statWpm">0</span><span class="label">WPM</span></div>
+      <div class="stat acc"><span class="num" id="statAcc">100%</span><span class="label">Accuracy</span></div>
+      <div class="stat time"><span class="num" id="statTime">0s</span><span class="label">Time</span></div>
+      <div class="stat err"><span class="num" id="statErr">0</span><span class="label">Errors</span></div>
+    </div>
+
+    <div class="completion-panel" id="completionPanel">
+      <p class="headline">Exercise complete</p>
+      <p class="recap" id="completionRecap"></p>
+      <div class="completion-actions">
+        <button class="btn btn-primary" id="tryAnotherBtn">Try another, mixed up</button>
+        <button class="btn btn-secondary" id="chooseOtherBtn">Choose a different practice</button>
+      </div>
+    </div>
+
+    <div class="target-text" id="targetText"></div>
+    <input id="hiddenInput" class="sr-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
+
+    <p class="practice-hint">Click the text above, then just start typing. <button id="restartBtn">Restart this exercise</button></p>
+
+    <div class="keyboard" id="keyboard"></div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="swatch pinky"></span> Pinky</div>
+      <div class="legend-item"><span class="swatch ring"></span> Ring finger</div>
+      <div class="legend-item"><span class="swatch middle"></span> Middle finger</div>
+      <div class="legend-item"><span class="swatch index"></span> Index finger</div>
+      <div class="legend-item">Bumps on <strong style="color:var(--text)">F</strong> &amp; <strong style="color:var(--text)">J</strong> mark home row</div>
+    </div>
+  </section>
+
+  <footer>
+    <span>keyrow — practice lives in this tab only, nothing is saved when you close it.</span>
+    <span>Built for students learning to type.</span>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  const categories = [];
+  categories.push(
+    { title:"Home row", desc:"asdf jkl; — the anchor row for every other key",
+      variants:[
+        "asdf jkl; asdf jkl; fj fj dk dk sl sl a; a; asdf jkl; fjfj dkdk slsl a;a; ask fads all salads",
+        "dad had a sad lad; ask a lass; a flag; a flask falls; glass falls; a glad lad asks a dad",
+        "gash dash hash lash sash flag flask glad half shall fall hall glass salad; a lass adds a flask"
+      ] },
+    { title:"Top row", desc:"qwer uiop — reaching up without leaving home",
+      variants:[
+        "qwer uiop qwer uiop qw er ui op quiet wire your pot equity quote treaty pretty tulip",
+        "we type quiet rows; your wrist stays low; write to your pet; try our quiet route",
+        "outer power tower quote wrote route your true year power tree wire quiet type writer"
+      ] },
+    { title:"Bottom row", desc:"zxcv m,./ — the lowest reach, mind the stretch",
+      variants:[
+        "zxcv m,./ zxcv m,./ zx cv m, ./ zebra van cave calm exam vivid comma zoom exact",
+        "can van man zoom vex mix comb bran cave zebra exam vivid, calm exact comma",
+        "vex zoom cave bran comb exam vivid can van man mix zebra calm exact zone"
+      ] },
+    { title:"Numbers", desc:"1 through 0 — top of the board, no looking down",
+      variants:[
+        "1234 7890 1234 7890 12 34 78 90 1357 2468 90 2025 1984 3901 7788 2468",
+        "10 20 30 45 67 89 100 250 3690 4815 16 23 42 909 1010 2468",
+        "5 15 25 35 45 55 65 75 85 95 105 205 305 405 505 1000"
+      ] },
+    { title:"Words", desc:"whole words strung together at reading speed",
+      variants:[
+        "the quick brown fox jumps over the lazy dog and runs into the forest before the rain begins",
+        "practice every day and your fingers will remember the keys without you thinking twice",
+        "small steady steps build big habits over time so keep your hands relaxed and steady"
+      ] },
+    { title:"Sentences", desc:"full sentences with punctuation and rhythm",
+      variants:[
+        "Practice makes perfect when you type every single day without looking at the keys. Speed follows accuracy, not the other way around.",
+        "Good posture keeps your wrists happy: shoulders relaxed, elbows bent, and eyes on the screen, not the keyboard.",
+        "Typing well is a habit built one careful keystroke at a time, long before it ever becomes fast."
+      ] }
+  );
+
+  const lastVariant = new Array(categories.length).fill(-1);
+
+  function pickVariant(catIndex){
+    const variants = categories[catIndex].variants;
+    if (variants.length === 1) return variants[0];
+    let idx;
+    do { idx = Math.floor(Math.random() * variants.length); }
+    while (idx === lastVariant[catIndex]);
+    lastVariant[catIndex] = idx;
+    return variants[idx];
+  }
+
+  const keyRows = [
+    [ {k:'`'}, {k:'1'}, {k:'2'}, {k:'3'}, {k:'4'}, {k:'5'}, {k:'6'}, {k:'7'}, {k:'8'}, {k:'9'}, {k:'0'}, {k:'-'}, {k:'=', }, {k:'⌫', util:true, w:1.6} ],
+    [ {k:'Tab', util:true, w:1.4}, {k:'q'}, {k:'w'}, {k:'e'}, {k:'r'}, {k:'t'}, {k:'y'}, {k:'u'}, {k:'i'}, {k:'o'}, {k:'p'}, {k:'['}, {k:']'}, {k:'\\', util:true} ],
+    [ {k:'Caps', util:true, w:1.6}, {k:'a'}, {k:'s'}, {k:'d'}, {k:'f', bump:true}, {k:'g'}, {k:'h'}, {k:'j', bump:true}, {k:'k'}, {k:'l'}, {k:';'}, {k:"'"}, {k:'Enter', util:true, w:1.8} ],
+    [ {k:'Shift', util:true, w:2}, {k:'z'}, {k:'x'}, {k:'c'}, {k:'v'}, {k:'b'}, {k:'n'}, {k:'m'}, {k:','}, {k:'.'}, {k:'/'}, {k:'Shift', util:true, w:2} ],
+    [ {k:'Space', util:true, space:true} ]
+  ];
+
+  const fingerMap = {
+    '`':'pinky','1':'pinky','q':'pinky','a':'pinky','z':'pinky',
+    '2':'ring','w':'ring','s':'ring','x':'ring',
+    '3':'middle','e':'middle','d':'middle','c':'middle',
+    '4':'index','5':'index','r':'index','f':'index','g':'index','t':'index','v':'index','b':'index',
+    '6':'index','7':'index','y':'index','h':'index','n':'index','u':'index','j':'index','m':'index',
+    '8':'middle','i':'middle','k':'middle',',':'middle',
+    '9':'ring','o':'ring','l':'ring','.':'ring',
+    '0':'pinky','-':'pinky','=':'pinky','p':'pinky','[':'pinky',']':'pinky',';':'pinky',"'":'pinky','/':'pinky','\\':'pinky'
+  };
+
+  const keyboardEl = document.getElementById('keyboard');
+  const keyEls = {};
+
+  keyRows.forEach(row => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'kb-row';
+    row.forEach(k => {
+      const el = document.createElement('div');
+      const finger = fingerMap[k.k.toLowerCase()];
+      el.className = 'key' + (k.util ? ' utility' : '') + (finger ? ' f-'+finger : '') + (k.bump ? ' home-bump' : '') + (k.space ? ' space' : '');
+      if (k.w) el.style.flex = k.w;
+      el.textContent = k.k;
+      el.dataset.key = k.k.toLowerCase();
+      rowEl.appendChild(el);
+      if (!keyEls[k.k.toLowerCase()]) keyEls[k.k.toLowerCase()] = [];
+      keyEls[k.k.toLowerCase()].push(el);
+    });
+    keyboardEl.appendChild(rowEl);
+  });
+
+  function flashKey(char){
+    const c = char === ' ' ? 'space' : char.toLowerCase();
+    const els = keyEls[c];
+    if (!els) return;
+    els.forEach(el => {
+      el.classList.add('pressed');
+      setTimeout(()=> el.classList.remove('pressed'), 90);
+    });
+  }
+
+  function clearNext(){
+    document.querySelectorAll('.key.next').forEach(el => el.classList.remove('next'));
+  }
+
+  function highlightNext(char){
+    clearNext();
+    if (!char) return;
+    const c = char === ' ' ? 'space' : char.toLowerCase();
+    const els = keyEls[c];
+    if (els) els.forEach(el => el.classList.add('next'));
+  }
+
+  // ---- home grid ----
+  const homeGridEl = document.getElementById('homeGrid');
+  categories.forEach((c, i) => {
+    const card = document.createElement('div');
+    card.className = 'home-card';
+    card.innerHTML = `<span class="n">0${i+1}</span>
+      <h3>${c.title}</h3>
+      <p>${c.desc}</p>
+      <span class="start">Start →</span>`;
+    card.addEventListener('click', () => startCategory(i));
+    homeGridEl.appendChild(card);
+  });
+
+  const homeView = document.getElementById('homeView');
+  const practiceView = document.getElementById('practiceView');
+  const practiceTitleEl = document.getElementById('practiceTitle');
+  const practiceDescEl = document.getElementById('practiceDesc');
+
+  function showHome(){
+    clearInterval(timerInterval);
+    homeView.style.display = '';
+    practiceView.style.display = 'none';
+  }
+
+  function showPractice(){
+    homeView.style.display = 'none';
+    practiceView.style.display = '';
+  }
+
+  document.getElementById('navHome').addEventListener('click', (e) => { e.preventDefault(); showHome(); });
+  document.getElementById('backLink').addEventListener('click', showHome);
+
+  // ---- practice state ----
+  const targetEl = document.getElementById('targetText');
+  const input = document.getElementById('hiddenInput');
+  const statWpm = document.getElementById('statWpm');
+  const statAcc = document.getElementById('statAcc');
+  const statTime = document.getElementById('statTime');
+  const statErr = document.getElementById('statErr');
+
+  let currentCategory = 0;
+  let target = '';
+  let startTime = null;
+  let errorCount = 0;
+  let totalKeystrokes = 0;
+  let timerInterval = null;
+  let isDone = false;
+
+  const completionPanel = document.getElementById('completionPanel');
+  const completionRecap = document.getElementById('completionRecap');
+
+  function resetPracticeUI(){
+    startTime = null;
+    errorCount = 0;
+    totalKeystrokes = 0;
+    isDone = false;
+    input.value = '';
+    input.disabled = false;
+    clearInterval(timerInterval);
+    statWpm.textContent = '0';
+    statAcc.textContent = '100%';
+    statTime.textContent = '0s';
+    statErr.textContent = '0';
+    completionPanel.classList.remove('show');
+    practiceView.classList.remove('done');
+  }
+
+  function startCategory(i, keepText){
+    currentCategory = i;
+    target = keepText || pickVariant(i);
+    practiceTitleEl.textContent = categories[i].title;
+    practiceDescEl.textContent = categories[i].desc;
+    resetPracticeUI();
+    renderTarget();
+    showPractice();
+    input.focus();
+  }
+
+  function renderTarget(){
+    const typed = input.value;
+    let html = '';
+    for (let idx = 0; idx < target.length; idx++){
+      const ch = target[idx];
+      let cls = 'pending';
+      if (idx < typed.length){
+        cls = (typed[idx] === ch) ? 'correct' : 'incorrect';
+      }
+      if (idx === typed.length) cls += ' current';
+      const display = ch === ' ' ? ' ' : ch;
+      html += `<span class="char ${cls}">${display}</span>`;
+    }
+    targetEl.innerHTML = html;
+    highlightNext(target[typed.length]);
+  }
+
+  function updateStats(){
+    const typed = input.value;
+    let correct = 0;
+    for (let i = 0; i < typed.length; i++){
+      if (typed[i] === target[i]) correct++;
+    }
+    const acc = typed.length ? Math.round((correct / typed.length) * 100) : 100;
+    statAcc.textContent = acc + '%';
+    statErr.textContent = String(errorCount);
+
+    if (startTime){
+      const elapsedMin = (Date.now() - startTime) / 60000;
+      const wpm = elapsedMin > 0 ? Math.round((correct / 5) / elapsedMin) : 0;
+      statWpm.textContent = String(wpm);
+      statTime.textContent = Math.round((Date.now() - startTime)/1000) + 's';
+    }
+  }
+
+  targetEl.addEventListener('click', () => input.focus());
+
+  input.addEventListener('input', (e) => {
+    if (isDone) return;
+
+    if (!startTime && input.value.length > 0){
+      startTime = Date.now();
+      timerInterval = setInterval(updateStats, 500);
+    }
+
+    const typed = input.value;
+    const lastChar = typed[typed.length - 1];
+    if (lastChar !== undefined){
+      flashKey(lastChar);
+      totalKeystrokes++;
+      if (target[typed.length - 1] !== lastChar) errorCount++;
+    }
+
+    if (typed.length >= target.length){
+      input.value = typed.slice(0, target.length);
+      clearInterval(timerInterval);
+      clearNext();
+      finishExercise();
+    }
+
+    renderTarget();
+    updateStats();
+  });
+
+  function finishExercise(){
+    isDone = true;
+    input.disabled = true;
+    practiceView.classList.add('done');
+    const wpm = statWpm.textContent;
+    const acc = statAcc.textContent;
+    const time = statTime.textContent;
+    completionRecap.innerHTML = `<strong>${wpm} WPM</strong> · <strong>${acc}</strong> accuracy · finished in <strong>${time}</strong>`;
+    completionPanel.classList.add('show');
+  }
+
+  document.getElementById('restartBtn').addEventListener('click', () => startCategory(currentCategory, target));
+  document.getElementById('tryAnotherBtn').addEventListener('click', () => startCategory(currentCategory));
+  document.getElementById('chooseOtherBtn').addEventListener('click', showHome);
+
+  showHome();
+})();
+</script>
+</body>
+</html>
